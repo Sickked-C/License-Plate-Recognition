@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlateVN — License Plate Recognition</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0d;
+      --surface: #141414;
+      --surface2: #1c1c1c;
+      --border: #2a2a2a;
+      --accent: #e8ff47;
+      --accent2: #ff6b35;
+      --text: #f0f0f0;
+      --muted: #666;
+      --mono: 'Space Mono', monospace;
+      --sans: 'Barlow', sans-serif;
+    }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Scanline overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.03) 2px,
+        rgba(0,0,0,0.03) 4px
+      );
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    /* Header */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 1.25rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      background: rgba(13,13,13,0.95);
+      backdrop-filter: blur(10px);
+      z-index: 10;
+    }
+
+    .logo {
+      font-family: var(--mono);
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .logo span { color: var(--accent); }
+
+    .header-badge {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 2px;
+    }
+
+    /* Main layout */
+    main {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+    }
+
+    /* Hero */
+    .hero {
+      margin-bottom: 3rem;
+      position: relative;
+    }
+
+    .hero-eyebrow {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hero-eyebrow::before {
+      content: '';
+      width: 24px;
+      height: 1px;
+      background: var(--accent);
+    }
+
+    h1 {
+      font-family: var(--mono);
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+    }
+
+    h1 em {
+      color: var(--accent);
+      font-style: normal;
+    }
+
+    .hero-desc {
+      font-size: 1rem;
+      color: var(--muted);
+      font-weight: 300;
+      max-width: 480px;
+      line-height: 1.6;
+    }
+
+    /* Stats row */
+    .stats {
+      display: flex;
+      gap: 2rem;
+      margin-top: 2rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .stat-item { }
+
+    .stat-value {
+      font-family: var(--mono);
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent);
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* Upload area */
+    .upload-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    @media (max-width: 640px) {
+      .upload-section { grid-template-columns: 1fr; }
+    }
+
+    .upload-zone {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      background: var(--surface);
+      aspect-ratio: 4/3;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+
+    .upload-zone::before {
+      content: '';
+      position: absolute;
+      inset: 4px;
+      border: 1px dashed var(--border);
+      border-radius: 2px;
+      pointer-events: none;
+      transition: border-color 0.2s;
+    }
+
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(232,255,71,0.03);
+    }
+
+    .upload-zone:hover::before, .upload-zone.dragover::before {
+      border-color: var(--accent);
+    }
+
+    .upload-zone input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .upload-icon {
+      font-size: 2.5rem;
+      opacity: 0.3;
+    }
+
+    .upload-text {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .upload-text strong {
+      color: var(--accent);
+      display: block;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    /* Preview */
+    .preview-zone {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--surface);
+      aspect-ratio: 4/3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .preview-zone img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .preview-empty {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--border);
+      text-align: center;
+    }
+
+    /* Submit */
+    .submit-btn {
+      width: 100%;
+      padding: 16px;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+    }
+
+    .submit-btn:hover { background: #d4eb30; transform: translateY(-1px); }
+    .submit-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+
+    /* Loading */
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .loading.show { display: block; }
+
+    .loading-bar {
+      height: 2px;
+      background: var(--border);
+      border-radius: 1px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+
+    .loading-fill {
+      height: 100%;
+      background: var(--accent);
+      animation: loadingAnim 1s ease-in-out infinite;
+      width: 40%;
+    }
+
+    @keyframes loadingAnim {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(350%); }
+    }
+
+    .loading-text {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* Results */
+    .result-section {
+      display: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .result-section.show { display: block; }
+
+    .result-header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .result-title {
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .result-time {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .result-body { padding: 1.5rem; }
+
+    /* No plates */
+    .no-plates {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+      padding: 1rem;
+    }
+
+    /* Plate card */
+    .plate-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .plate-number {
+      font-family: var(--mono);
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+
+    .plate-raw {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .plate-meta {
+      text-align: right;
+    }
+
+    .conf-bar-wrap {
+      width: 100px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+
+    .conf-bar {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+
+    .conf-text {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* Error */
+    .error-msg {
+      display: none;
+      padding: 1rem 1.5rem;
+      background: rgba(255,107,53,0.08);
+      border: 1px solid rgba(255,107,53,0.2);
+      border-radius: 4px;
+      color: var(--accent2);
+      font-family: var(--mono);
+      font-size: 13px;
+      margin-bottom: 1.5rem;
+    }
+
+    .error-msg.show { display: block; }
+
+    /* API info */
+    .api-footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .api-url {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .api-url span { color: var(--accent2); }
+
+    .api-docs-link {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--accent);
+      text-decoration: none;
+      border: 1px solid rgba(232,255,71,0.2);
+      padding: 4px 10px;
+      border-radius: 2px;
+      transition: all 0.15s;
+    }
+
+    .api-docs-link:hover { background: rgba(232,255,71,0.08); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">PLATE<span>VN</span></div>
+    <div class="header-badge">YOLOv8 + VietOCR</div>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div class="hero-eyebrow">Computer Vision · OCR</div>
+      <h1>Vietnamese<br>Plate <em>Detect</em></h1>
+      <p class="hero-desc">Upload a motorcycle photo — YOLOv8 detects the plate, VietOCR reads the characters.</p>
+      <div class="stats">
+        <div class="stat-item">
+          <span class="stat-value">99.4%</span>
+          <span class="stat-label">mAP@0.5</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">98.3%</span>
+          <span class="stat-label">Precision</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">~0.2s</span>
+          <span class="stat-label">Inference</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="upload-section">
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept=".jpg,.jpeg,.png" onchange="handleFile(event)">
+        <div class="upload-icon">📷</div>
+        <div class="upload-text">
+          <strong>Click or drag & drop</strong>
+          .jpg · .jpeg · .png
+        </div>
+      </div>
+
+      <div class="preview-zone" id="previewZone">
+        <div class="preview-empty" id="previewEmpty">NO IMAGE<br>SELECTED</div>
+        <img id="previewImg" style="display:none">
+      </div>
+    </div>
+
+    <button class="submit-btn" id="submitBtn" onclick="predict()" disabled>
+      → Run Detection
+    </button>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="loading" id="loading">
+      <div class="loading-bar"><div class="loading-fill"></div></div>
+      <div class="loading-text">Running YOLOv8 + VietOCR...</div>
+    </div>
+
+    <div class="result-section" id="resultSection">
+      <div class="result-header">
+        <span class="result-title">Detection Results</span>
+        <span class="result-time" id="resultTime"></span>
+      </div>
+      <div class="result-body" id="resultBody"></div>
+    </div>
+
+    <div class="api-footer">
+      <div class="api-url">
+        <span>POST</span> https://your-api.onrender.com<span>/predict</span>
+      </div>
+      <a class="api-docs-link" href="https://your-api.onrender.com/docs" target="_blank">API Docs →</a>
+    </div>
+  </main>
+
+  <script>
+    // ── CONFIG ──────────────────────────────
+    const API_BASE = 'http://localhost:8000'; // ← đổi thành URL Render khi deploy
+    // ────────────────────────────────────────
+
+    let selectedFile = null;
+
+    function handleFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      selectedFile = file;
+
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        document.getElementById('previewImg').src = ev.target.result;
+        document.getElementById('previewImg').style.display = 'block';
+        document.getElementById('previewEmpty').style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+      document.getElementById('submitBtn').disabled = false;
+
+      // Reset results
+      document.getElementById('resultSection').classList.remove('show');
+      document.getElementById('errorMsg').classList.remove('show');
+    }
+
+    // Drag & drop
+    const uz = document.getElementById('uploadZone');
+    uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('dragover'); });
+    uz.addEventListener('dragleave', () => uz.classList.remove('dragover'));
+    uz.addEventListener('drop', e => {
+      e.preventDefault();
+      uz.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        selectedFile = file;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          document.getElementById('previewImg').src = ev.target.result;
+          document.getElementById('previewImg').style.display = 'block';
+          document.getElementById('previewEmpty').style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('resultSection').classList.remove('show');
+      }
+    });
+
+    async function predict() {
+      if (!selectedFile) return;
+
+      document.getElementById('submitBtn').disabled = true;
+      document.getElementById('loading').classList.add('show');
+      document.getElementById('resultSection').classList.remove('show');
+      document.getElementById('errorMsg').classList.remove('show');
+
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      try {
+        const res = await fetch(`${API_BASE}/predict`, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || 'API error');
+        }
+
+        const data = await res.json();
+        showResults(data);
+
+      } catch (e) {
+        showError(e.message || 'Cannot connect to API.');
+      } finally {
+        document.getElementById('loading').classList.remove('show');
+        document.getElementById('submitBtn').disabled = false;
+      }
+    }
+
+    function showResults(data) {
+      document.getElementById('resultTime').textContent =
+        `${data.filename} · ${data.processing_time_s}s`;
+
+      const body = document.getElementById('resultBody');
+
+      if (data.plates_found === 0) {
+        body.innerHTML = `<div class="no-plates">// No plates detected</div>`;
+      } else {
+        body.innerHTML = data.plates.map(p => `
+          <div class="plate-card">
+            <div>
+              <div class="plate-number">${p.text}</div>
+              <div class="plate-raw">raw: ${p.text_raw}</div>
+            </div>
+            <div class="plate-meta">
+              <div class="conf-bar-wrap">
+                <div class="conf-bar" style="width:${p.confidence * 100}%"></div>
+              </div>
+              <div class="conf-text">conf: ${(p.confidence * 100).toFixed(1)}%</div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      document.getElementById('resultSection').classList.add('show');
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('errorMsg');
+      el.textContent = `// Error: ${msg}`;
+      el.classList.add('show');
+    }
+  </script>
+</body>
+</html>

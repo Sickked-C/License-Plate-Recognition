@@ -87,20 +87,35 @@ def preprocess_plate(plate_img):
 def correct_plate_text(text: str) -> str:
     text = re.sub(r'\s', '', text.strip().upper())
 
-    # Sửa: cho phép suffix chứa cả chữ cái (sẽ được correct sau)
+    # Thêm: chuẩn hoá dấu phân cách
+    text = re.sub(r'[:\.](?=\d{3})', '-', text)  # : hoặc . trước 3 số → -
+
     match = re.match(r'^(\d{2}[A-Z]{1,2}\d?)[.\-]([0-9A-Z.]+)$', text)
 
     if match:
         prefix = match.group(1)
         suffix = match.group(2)
 
+        # Sửa prefix — 2 số đầu chỉ được là số
+        LETTER_TO_NUM = {'O': '0', 'I': '1', 'S': '5',
+                         'B': '8', 'G': '6', 'Z': '2'}
+        prefix_digits = prefix[:2]
+        prefix_letters = prefix[2:]
+
+        # Fix 2 số đầu nếu bị nhầm chữ
+        prefix_digits_fixed = ''.join(
+            LETTER_TO_NUM.get(c, c) for c in prefix_digits
+        )
+
+        # Sửa suffix
         NUMBER_FIX = {'O': '0', 'I': '1', 'S': '5',
                       'B': '8', 'A': '4', 'T': '7', 'G': '6'}
         suffix_fixed = ''.join(
             NUMBER_FIX.get(c, c) if not c.isdigit() and c != '.' else c
             for c in suffix
         )
-        return f"{prefix}-{suffix_fixed}"
+
+        return f"{prefix_digits_fixed}{prefix_letters}-{suffix_fixed}"
 
     return text
 
