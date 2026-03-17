@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+ultralytics
+vietocr
+opencv-python-headless
+pillow
+python-multipart
+pytest
+httpx
