@@ -4,7 +4,7 @@
 
 A production-ready pipeline that detects and reads Vietnamese motorcycle license plates using **YOLOv8** for detection and **VietOCR** for character recognition — served via **FastAPI**, containerized with **Docker**, and tested with **CI/CD**.
 
-🌐 **[Live Demo](https://sickked-c.github.io/License-Plate-Recognition/)** · 📖 **[API Docs](https://github.com/Sickked-C/License-Plate-Recognition)**
+🌐 **[Live Demo](https://sickked-c.github.io/License-Plate-Recognition/)** 
 
 ---
 
